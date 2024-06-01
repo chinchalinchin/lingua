@@ -2,14 +2,6 @@ import argparse, json, typing
 
 import objects.lexical, settings, util
 
-word_ignores = [
-    *settings.syntax['endings']['word'],
-    *settings.syntax['endings']['sentence'],
-    *settings.syntax['punctuation'],
-    *settings.syntax['quotation'],
-    *settings.syntax['ignore']
-]
-
 def _args():
     parser = argparse.ArgumentParser(
         prog="Lingua Python",
@@ -24,10 +16,10 @@ def _process(file) -> None:
     w, s = _contextualize(w, s)
     _persist(w, s, file)
 
-def _ingest(file) -> typing.Tuple[settings.corpus, settings.text]:
+def _ingest(file) -> typing.Tuple[settings.corpus, settings.text]:    
     infile = open(file, 'r')
     char = not None
-    buff_word, buff_sentence = '', []
+    buff_w, buff_q, buff_s = '', [], []
 
     corpus, text = [], []
     w_count, s_count = 0, 0
@@ -35,61 +27,88 @@ def _ingest(file) -> typing.Tuple[settings.corpus, settings.text]:
     while char:
         char = infile.read(1).lower()
 
-        word_ended = util.word_ended(char, buff_word)
-        sentence_ended = util.sentence_ended(char)
-        punctuated = util.punctuated(char)
-        quoted = util.quoted(char)
+        # loop flags
+        w_end = util.word_ended(char, buff_w)
+        s_end = util.sentence_ended(char)
+        punctuate = util.punctuated(char)
+        quote = util.quoted(char)
+        quoting = util.quoting(buff_s)
 
-        if word_ended or sentence_ended:
+        # if about to unquote
+        if quoting and quote:
+            if settings.tokens['quotation'] not in corpus:
+                corpus.append(settings.tokens['quotation'])
+
+            buff_s.append(settings.tokens['quotation'])
             
-            word = objects.lexical.Word(buff_word)
+        # if about to quote or unquote
+        if quote:
+            if settings.tokens['quote'] not in corpus:
+                corpus.append(settings.tokens['quote'])
+
+            buff_s.append(settings.tokens['quote'])
+                
+            print(f'Found quote mark: {settings.tokens["quote"]}')
+
+            # if about to unquote and the quoted sentence has terminated.
+            if quoting and len(buff_q) == 0:
+                sentence = objects.lexical.Sentence(buff_s)
+                buff_s = []
+                print(f'Found quotation sentence: {sentence}')
+
+        # if word or sentence about to end
+        if w_end or s_end:
+            
+            word = objects.lexical.Word(buff_w)
 
             if word not in corpus:
                 corpus.append(word)
 
-            buff_sentence.append(word)
-            buff_word = ''
+            if quoting:
+                buff_q.append(word)
+
+            else:
+                buff_s.append(word)
+
+            buff_w = ''
             w_count += 1
 
             print(f'Found word: {word}')
 
-        if punctuated or quoted:
+        # if about to punctuate
+        if punctuate:
             punc = objects.lexical.Word(char)
 
             if punc not in corpus:
                 corpus.append(punc)
 
-            buff_sentence.append(punc)
+            if quoting:
+                buff_q.append(punc)
+                
+            else:
+                buff_s.append(punc)
 
             print(f'Found punctuation: {punc}')
 
-
-        if sentence_ended:
-
-            quotes = [ w for w in buff_sentence if w in settings.syntax['quotation'] ]
+        # if sentence about to end
+        if s_end:
             
-            if len(quotes) % 2 == 0:
-                sentence = objects.lexical.Sentence(buff_sentence)
-                text.append(sentence)
-                
-                buff_sentence = []
-                s_count += 1
+            if quoting:
+                sentence = objects.lexical.Sentence(buff_q)
+                buff_q = []
+                print(f'Found quoted sentence: {sentence}')
 
+
+            else: 
+                sentence = objects.lexical.Sentence(buff_s)
+                buff_s = []
                 print(f'Found sentence: {sentence}')
 
-        # missing the case where a sentence is entirely a quote:
-        #       "Yes."
-        #       "I do not remember it."
-
-        # in this case, the sentence_end occurs before the end quote.
-
-        # in other words, a 'quote', by its nature, needs to look at:
-            # the last character of the quoted sentence 
-            # the next character after the quotation
-
-        # in order to determine if the sentence continues. 
-        if char not in word_ignores:
-            buff_word = buff_word + char
+            text.append(sentence)
+            s_count += 1
+ 
+        if char not in settings.word_ignores:
+            buff_w = buff_w + char
 
     print("Total Word Count: ", w_count)
     print("Total Sentence Count: ", s_count)
@@ -116,8 +135,11 @@ def _contextualize(corpus: settings.corpus, text: settings.text):
             if s_index != s_length - 1:
                 end = s.words[s_index + 1]
 
-            w_index = corpus.index(s.words[s_index])
-            corpus[w_index].add_context(start, end)
+            try:
+                w_index = corpus.index(s.words[s_index])
+                corpus[w_index].add_context(start, end)
+            except:
+                print(s.words[s_index])
 
     return corpus, text
 

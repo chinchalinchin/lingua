@@ -11,3 +11,12 @@ def punctuated(char):
 
 def quoted(char):
     return char in settings.syntax['quotation']
+
+def quoting(sentence):
+    q = [
+        w 
+        for w in sentence
+        if w == settings.tokens['quote']
+    ]
+
+    return len(q) % 2 != 0
