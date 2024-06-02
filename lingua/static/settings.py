@@ -1,9 +1,10 @@
-import typing
+import os
 
-import objects.lexical 
+log_levels = [ 'NONE', 'INFO', 'DEBUG', 'VERBOSE']
 
-text : typing.TypeAlias = list[typing.Type[objects.lexical.Sentence]]
-corpus : typing.TypeAlias = list[typing.Type[objects.lexical.Word]]
+log_level = log_levels.index(
+    os.environ.setdefault('LOG_LEVEL', 'INFO')
+)
 
 syntax = {
     'endings': {
@@ -18,11 +19,6 @@ syntax = {
             '?',
             '!'
         ]
-    },
-    'tokens': {
-        'end': '(END)',
-        'null': '(NULL)',
-        'quote': '(QUOTE)'
     },
     'punctuation': [
         ',',
@@ -49,12 +45,3 @@ word_ignores = [
     *syntax['quotation'],
     *syntax['ignores']
 ]
-
-# TOKENS
-tokens = {
-    'quotation': objects.lexical.Word('(QUOTATION)'),
-    'end': objects.lexical.Word('(END)'),
-    'null': objects.lexical.Word('(NULL)'),
-    'quote': objects.lexical.Word('(QUOTE)'),
-    'comma': objects.lexical.Word('(COMMA)')
-}

@@ -1,4 +1,8 @@
-import settings
+import static.settings as settings
+
+def log(msg, level = "INFO"):
+    if settings.log_levels.index(level) <= settings.log_level: 
+        print(level + " : " + msg)
 
 def word_ended(char, word):
     return char in settings.syntax['endings']['word'] and word != ''
@@ -11,12 +15,3 @@ def punctuated(char):
 
 def quoted(char):
     return char in settings.syntax['quotation']
-
-def quoting(sentence):
-    q = [
-        w 
-        for w in sentence
-        if w == settings.tokens['quote']
-    ]
-
-    return len(q) % 2 != 0

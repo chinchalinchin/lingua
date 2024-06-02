@@ -3,6 +3,7 @@ class Word:
     def __init__(self, content):
         self.content = content
         self.contexts = []
+        self.distances = {}
         return
     
     def __str__(self):
@@ -21,14 +22,29 @@ class Word:
     def as_dict(self):
         return {
             'frequency': self.frequency(),
+            'distances': self.distances,
             'contexts': [
                 (
                     str(context[0]), 
                     str(context[1]))
                 for context in self.contexts
-            ]
+            ],
         }
     
+    def set_distance(self, word, dist):
+        self.distances[str(word)] = dist
+
+    def sort_distances(self):
+        s_dist = sorted(
+            self.distances.items(), 
+            key=lambda x: x[1],
+            reverse = True
+        )
+        self.distances = {
+            pair[0]: pair[1]
+            for pair in s_dist
+        }
+
     def add_context(self, start, end):
         return self.contexts.append(  
             (start, end)
@@ -36,6 +52,18 @@ class Word:
     
     def frequency(self):
         return len(self.contexts)
+    
+    def prior_contexts(self):
+        return [
+            str(context[0])
+            for context in self.contexts
+        ]
+
+    def post_contexts(self):
+        return [
+            str(context[1])
+            for context in self.contexts
+        ]
         
 class Sentence:
 
