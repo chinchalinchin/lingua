@@ -35,15 +35,9 @@ def ingest(file) -> typing.Tuple[objects.meta.Vocab, objects.meta.Corpus]:
 
         # if about to unquote
         if quoting and quote:
-            if objects.meta.tokens['quotation'] not in vocab:
-                vocab.append(objects.meta.tokens['quotation'])
-
             buff_s.append(objects.meta.tokens['quotation'])
 
         if quote:
-            if objects.meta.tokens['quote'] not in vocab:
-                vocab.append(objects.meta.tokens['quote'])
-
             buff_s.append(objects.meta.tokens['quote'])
                 
             util.log(
@@ -78,9 +72,6 @@ def ingest(file) -> typing.Tuple[objects.meta.Vocab, objects.meta.Corpus]:
 
         if punctuate:
             punc = objects.lexical.Word(char)
-
-            if punc not in vocab:
-                vocab.append(punc)
 
             if quoting:
                 buff_q.append(punc)
@@ -119,7 +110,6 @@ def ingest(file) -> typing.Tuple[objects.meta.Vocab, objects.meta.Corpus]:
     return vocab, corpus
 
 def process(vocab: objects.meta.Vocab, corpus: objects.meta.Corpus):
-    null = objects.meta.tokens['null']
     v_len = len(vocab)
 
     for s in corpus:
@@ -127,14 +117,34 @@ def process(vocab: objects.meta.Vocab, corpus: objects.meta.Corpus):
 
         for s_i in range(s_len):
             
-            first = (s_i == 0)
-            last = (s_i == s_len - 1)
+            if s.words[s_i] not in objects.meta.tokens.values():
+          
+                buff_s_i = s_i
+                while buff_s_i >= 0:
+                    try:
+                        buff_s_i -= 1
 
-            prior = s.words[s_i -1] if not first else null
-            post = s.words[s_i + 1] if not last else null
+                        if s.words[buff_s_i - 1] not in objects.meta.tokens.values():
+                            prior = s.words[buff_s_i - 1]
+                            break
+                            
+                    except IndexError:
+                        prior = objects.meta.tokens['null']
 
-            w_of_s_i = vocab.index(s.words[s_i])
-            vocab[w_of_s_i].add_context(prior, post)
+                buff_s_i = s_i
+                while buff_s_i <= s_len - 1:
+                    try:
+                        buff_s_i += 1
+
+                        if s.words[buff_s_i + 1] not in objects.meta.tokens.values():
+                            post = s.words[buff_s_i + 1]
+                            break
+
+                    except IndexError: 
+                        post = objects.meta.tokens['null']
+
+                w_of_s_i = vocab.index(s.words[s_i])
+                vocab[w_of_s_i].add_context(prior, post)
     
     for o_i in range(v_len):
         o_word = vocab[o_i]
@@ -178,4 +188,5 @@ def format(vocab: objects.meta.Vocab, corpus: objects.meta.Corpus):
     return {
         w.content: dict(w)
         for w in vocab
+        if w not in objects.meta.tokens.values()
     }

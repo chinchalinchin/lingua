@@ -23,12 +23,7 @@ class Word:
         return {
             'frequency': self.frequency(),
             'distances': self.distances,
-            'contexts': [
-                (
-                    str(context[0]), 
-                    str(context[1]))
-                for context in self.contexts
-            ],
+            'contexts': self.unique_contexts(),
         }
     
     def set_distance(self, word, dist):
@@ -65,6 +60,16 @@ class Word:
             for context in self.contexts
         ]
         
+    def unique_contexts(self):
+        return list(
+            set([
+                (
+                    str(context[0]), 
+                    str(context[1]))
+                for context in self.contexts
+            ])
+        )
+    
 class Sentence:
 
     def __init__(self, words):
